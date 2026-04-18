@@ -1,0 +1,57 @@
+name: 'Deploy Application'
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: 'Build and Deploy'
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: vars
+        run: echo "IMAGE_TAG=togglemaster:${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Stop existing container
+        run: |
+          docker stop togglemaster 2>/dev/null || true
+          docker rm togglemaster 2>/dev/null || true
+
+      - name: Build Docker image
+        run: docker build -t ${{ steps.vars.outputs.IMAGE_TAG }} -t togglemaster:latest .
+
+      - name: Create .env file
+        run: |
+          cat << EOF > .env
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_PORT=5432
+          EOF
+
+      - name: Run container
+        run: |
+          docker run -d \
+            --name togglemaster \
+            --restart unless-stopped \
+            -p 5000:5000 \
+            --env-file .env \
+            ${{ steps.vars.outputs.IMAGE_TAG }}
+          rm -f .env
+
+      - name: Health check
+        run: |
+          echo "Aguardando aplicacao iniciar..."
+          sleep 10
+          curl -f http://localhost:5000/health || echo "Health check falhou - verificar logs com: docker logs togglemaster"
+
+      - name: Clean old images
+        run: |
+          docker image prune -f
