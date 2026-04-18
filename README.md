@@ -71,4 +71,3 @@ A aplicação fornecerá uma API simples para CRUD de feature flags.
 - A infraestrutura AWS proposta segue melhores práticas de segurança com sub-redes privadas para o banco de dados.
 - Este é o ponto de partida para evoluir o sistema para uma arquitetura distribuída em fases futuras.
 
-Para dúvidas, consulte o Discord da FIAP.
